@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reedo - Book Recommendations</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="logo">📚 Reedo</h1>
+            <div class="nav-links">
+                <a href="#" id="nav-books" class="nav-link">Browse Books</a>
+                <a href="#" id="nav-recommendations" class="nav-link">My Recommendations</a>
+                <a href="#" id="nav-profile" class="nav-link">Profile</a>
+                <button id="btn-logout" class="btn-logout" style="display: none;">Logout</button>
+                <button id="btn-login" class="btn-primary">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login/Signup Modal -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="auth-title">Login</h2>
+            <form id="auth-form">
+                <div id="signup-fields" style="display: none;">
+                    <input type="text" id="first-name" placeholder="First Name" required>
+                    <input type="text" id="last-name" placeholder="Last Name" required>
+                </div>
+                <input type="email" id="email" placeholder="Email" required>
+                <input type="password" id="password" placeholder="Password" required>
+                <button type="submit" class="btn-primary btn-full">Submit</button>
+            </form>
+            <p class="auth-switch">
+                <span id="auth-switch-text">Don't have an account?</span>
+                <a href="#" id="auth-switch-link">Sign up</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Login Prompt -->
+        <div id="login-prompt" class="login-prompt">
+            <h2>Welcome to Reedo</h2>
+            <p>Please login or sign up to get personalized book recommendations</p>
+            <button id="prompt-login" class="btn-primary">Login / Sign Up</button>
+        </div>
+
+        <!-- Books Page -->
+        <div id="books-page" class="page" style="display: none;">
+            <h2>Browse Books</h2>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search books...">
+                <input type="text" id="author-filter" placeholder="Filter by author">
+                <input type="text" id="genre-filter" placeholder="Filter by genre">
+                <button id="search-btn" class="btn-primary">Search</button>
+            </div>
+            <div id="books-grid" class="books-grid"></div>
+            <div class="pagination">
+                <button id="prev-page" class="btn-secondary">Previous</button>
+                <span id="page-info">Page 1</span>
+                <button id="next-page" class="btn-secondary">Next</button>
+            </div>
+        </div>
+
+        <!-- Recommendations Page -->
+        <div id="recommendations-page" class="page" style="display: none;">
+            <h2>Your Recommendations</h2>
+            <button id="refresh-recommendations" class="btn-primary">Refresh Recommendations</button>
+            <div id="recommendations-grid" class="books-grid"></div>
+        </div>
+
+        <!-- Profile Page -->
+        <div id="profile-page" class="page" style="display: none;">
+            <h2>Your Profile</h2>
+            <div id="profile-info" class="profile-info"></div>
+            <div class="preferences-section">
+                <h3>Update Preferences</h3>
+                <form id="preferences-form">
+                    <div class="form-group">
+                        <label>Favorite Genres (comma-separated)</label>
+                        <input type="text" id="pref-genres" placeholder="e.g., Fiction, Mystery, Science Fiction">
+                    </div>
+                    <div class="form-group">
+                        <label>Favorite Authors (comma-separated)</label>
+                        <input type="text" id="pref-authors" placeholder="e.g., J.K. Rowling, Stephen King">
+                    </div>
+                    <div class="form-group">
+                        <label>Reading Preferences</label>
+                        <textarea id="pref-reading-prefs" placeholder="Describe your reading preferences..."></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Update Preferences</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
