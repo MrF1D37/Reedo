@@ -118,24 +118,19 @@ function showAuthModal(mode) {
     const switchText = document.getElementById('auth-switch-text');
     const switchLink = document.getElementById('auth-switch-link');
 
+    // Reset form
+    document.getElementById('auth-form').reset();
+
     if (mode === 'login') {
         title.textContent = 'Login';
         signupFields.style.display = 'none';
         switchText.textContent = "Don't have an account?";
         switchLink.textContent = 'Sign up';
-        switchLink.onclick = (e) => {
-        e.preventDefault();
-        showAuthModal('signup');
-        };
     } else {
         title.textContent = 'Sign Up';
         signupFields.style.display = 'block';
         switchText.textContent = 'Already have an account?';
         switchLink.textContent = 'Login';
-        switchLink.onclick = (e) => {
-        e.preventDefault();
-        showAuthModal('login');
-        };
     }
     modal.style.display = 'block';
 }
@@ -148,7 +143,8 @@ function closeAuthModal() {
 function toggleAuthMode(e) {
     e.preventDefault();
     const title = document.getElementById('auth-title');
-    if (title.textContent === 'Login') {
+    const currentMode = title.textContent.trim();
+    if (currentMode === 'Login') {
         showAuthModal('signup');
     } else {
         showAuthModal('login');
@@ -157,17 +153,23 @@ function toggleAuthMode(e) {
 
 async function handleAuth(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
-    const title = document.getElementById('auth-title').textContent;
+    const title = document.getElementById('auth-title').textContent.trim();
+
+    if (!email || !password) {
+        showMessage('Please fill in email and password', 'error');
+        return;
+    }
 
     const isSignup = title === 'Sign Up';
     const endpoint = isSignup ? '/auth/signup' : '/auth/login';
+    
     const body = isSignup ? {
         email,
         password,
-        first_name: document.getElementById('first-name').value,
-        last_name: document.getElementById('last-name').value
+        first_name: document.getElementById('first-name').value.trim() || null,
+        last_name: document.getElementById('last-name').value.trim() || null
     } : { email, password };
 
     try {
@@ -194,7 +196,7 @@ async function handleAuth(e) {
         }
     } catch (error) {
         console.error('Auth error:', error);
-        showMessage('Network error. Please try again.', 'error');
+        showMessage('Network error. Please check if the backend is running.', 'error');
     }
 }
 
