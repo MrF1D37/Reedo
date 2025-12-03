@@ -475,12 +475,24 @@ async function updatePreferences(e) {
             showMessage('Preferences updated successfully!', 'success');
             loadProfile();
         } else {
-            const error = await response.json();
-            showMessage(error.detail || 'Error updating preferences', 'error');
+            let errorMessage = 'Error updating preferences';
+            try {
+                const error = await response.json();
+                errorMessage = error.detail || error.message || errorMessage;
+                console.error('Preferences update error:', error);
+            } catch (e) {
+                console.error('Failed to parse error response:', e);
+                errorMessage = `Error ${response.status}: ${response.statusText}`;
+            }
+            showMessage(errorMessage, 'error');
         }
     } catch (error) {
         console.error('Error updating preferences:', error);
-        showMessage('Error updating preferences', 'error');
+        if (error.message && error.message.includes('CORS')) {
+            showMessage('CORS error: Make sure the backend is running and CORS is configured correctly', 'error');
+        } else {
+            showMessage(`Network error: ${error.message || 'Error updating preferences'}`, 'error');
+        }
     }
 }
 
