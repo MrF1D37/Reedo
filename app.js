@@ -10,9 +10,15 @@ const LIMIT = 12;
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
     setupEventListeners();
-    showPage('login-prompt');
+    checkAuth();
+    // Show appropriate page based on auth status
+    if (localStorage.getItem('authToken')) {
+        showPage('books-page');
+        loadBooks();
+    } else {
+        showPage('login-prompt');
+    }
 });
 
 // Event Listeners
@@ -24,6 +30,7 @@ function setupEventListeners() {
     document.getElementById('auth-form').addEventListener('submit', handleAuth);
     document.getElementById('auth-switch-link').addEventListener('click', toggleAuthMode);
     document.querySelector('.close').addEventListener('click', closeAuthModal);
+    document.getElementById('close-book-modal').addEventListener('click', closeBookModal);
 
     // Navigation
     document.getElementById('nav-books').addEventListener('click', (e) => {
@@ -74,7 +81,11 @@ function setupEventListeners() {
     });
 
     // Recommendations
-    document.getElementById('refresh-recommendations').addEventListener('click', loadRecommendations);
+    document.getElementById('refresh-recommendations').addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('Refresh recommendations clicked');
+        loadRecommendations();
+    });
 
     // Profile
     document.getElementById('preferences-form').addEventListener('submit', updatePreferences);
@@ -94,20 +105,30 @@ function checkAuth() {
 }
 
 async function loadCurrentUser() {
+    if (!authToken) return;
+    
     try {
         const response = await fetch(`${API_BASE_URL}/users/me`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
         });
+        
         if (response.ok) {
             currentUser = await response.json();
-        } else {
+        } else if (response.status === 401) {
+            // Only logout on authentication errors (401 Unauthorized)
+            console.log('Token expired or invalid, logging out');
             logout();
+        } else {
+            // For other errors (network, server errors), keep the token but log the error
+            console.error('Error loading user:', response.status, response.statusText);
+            // Don't logout on network/server errors - user might still be valid
         }
     } catch (error) {
-        console.error('Error loading user:', error);
-        logout();
+        // Network errors - don't logout, just log
+        console.error('Network error loading user:', error);
+        // Keep the token - might be a temporary network issue
     }
 }
 
@@ -243,29 +264,7 @@ async function loadBooks() {
 }
 
 function displayBooks(books) {
-    const grid = document.getElementById('books-grid');
-    if (books.length === 0) {
-        grid.innerHTML = '<p class="loading">No books found</p>';
-        return;
-    }
-
-    grid.innerHTML = books.map(book => `
-        <div class="book-card">
-            <h3>${escapeHtml(book.title)}</h3>
-            <p class="author">${book.author || 'Unknown Author'}</p>
-            <p class="description">${escapeHtml(book.description || 'No description available')}</p>
-            ${book.genres && book.genres.length > 0 ? `
-                <div class="genres">
-                    ${book.genres.map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('')}
-                </div>
-            ` : ''}
-            <div class="book-actions">
-                <button class="btn-view" onclick="interactWithBook(${book.id}, 'view')">View</button>
-                <button class="btn-like" onclick="interactWithBook(${book.id}, 'like')">Like</button>
-                <button class="btn-rate" onclick="rateBook(${book.id})">Rate</button>
-            </div>
-        </div>
-    `).join('');
+    displayBooksInGrid(books, 'books-grid');
 }
 
 function updatePagination() {
@@ -275,9 +274,23 @@ function updatePagination() {
 
 // Recommendations
 async function loadRecommendations() {
-    if (!authToken) return;
+    if (!authToken) {
+        showMessage('Please login to see recommendations', 'error');
+        showAuthModal('login');
+        return;
+    }
+
+    const grid = document.getElementById('recommendations-grid');
+    if (!grid) {
+        console.error('Recommendations grid not found!');
+        return;
+    }
+    
+    // Show loading state
+    grid.innerHTML = '<p class="loading">Loading recommendations...</p>';
 
     try {
+        console.log('Fetching recommendations...');
         const response = await fetch(`${API_BASE_URL}/recommend/`, {
             method: 'POST',
             headers: {
@@ -287,18 +300,69 @@ async function loadRecommendations() {
             body: JSON.stringify({ limit: 20 })
         });
 
+        console.log('Recommendations response status:', response.status);
+
         if (response.ok) {
             const data = await response.json();
-            displayBooks(data.recommendations);
+            console.log('Recommendations data:', data);
+            if (data.recommendations && data.recommendations.length > 0) {
+                // Use the recommendations grid specifically
+                displayBooksInGrid(data.recommendations, 'recommendations-grid');
+                showMessage(`Found ${data.recommendations.length} recommendations!`, 'success');
+            } else {
+                grid.innerHTML = '<p class="loading">No recommendations available. Try interacting with some books first!</p>';
+            }
         } else {
             const error = await response.json();
-            document.getElementById('recommendations-grid').innerHTML = 
-                `<p class="loading">${error.detail || 'No recommendations available. Try interacting with some books first!'}</p>`;
+            console.error('Recommendations error:', error);
+            const errorMsg = error.detail || 'No recommendations available. Try interacting with some books first!';
+            grid.innerHTML = `<p class="loading">${errorMsg}</p>`;
+            showMessage(errorMsg, 'error');
         }
     } catch (error) {
         console.error('Error loading recommendations:', error);
-        showMessage('Error loading recommendations', 'error');
+        grid.innerHTML = '<p class="loading">Error loading recommendations. Please check if the backend is running.</p>';
+        showMessage('Error loading recommendations. Check console for details.', 'error');
     }
+}
+
+// Helper function to display books in a specific grid
+function displayBooksInGrid(books, gridId) {
+    const grid = document.getElementById(gridId);
+    if (!grid) {
+        console.error(`Grid ${gridId} not found!`);
+        return;
+    }
+    
+    if (books.length === 0) {
+        grid.innerHTML = '<p class="loading">No books found</p>';
+        return;
+    }
+
+    grid.innerHTML = books.map(book => {
+        // Extract published date and info link from book object
+        const publishedDate = book.published_date || null;
+        const infoLink = book.info_link || null;
+
+        return `
+        <div class="book-card">
+            <h3>${escapeHtml(book.title)}</h3>
+            <p class="author">by ${escapeHtml(book.author || 'Unknown Author')}</p>
+            ${publishedDate ? `<p class="published-date">Published: ${escapeHtml(publishedDate)}</p>` : ''}
+            <p class="description">${escapeHtml(book.description || 'No description available')}</p>
+            ${book.genres && book.genres.length > 0 ? `
+                <div class="genres">
+                    ${book.genres.map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('')}
+                </div>
+            ` : ''}
+            <div class="book-actions">
+                <button class="btn-view" onclick="showBookDetails(${book.id})">View Details</button>
+                <button class="btn-like" onclick="interactWithBook(${book.id}, 'like')">Like</button>
+            </div>
+            ${infoLink ? `<a href="${escapeHtml(infoLink)}" target="_blank" class="read-more-link">Read More →</a>` : ''}
+        </div>
+    `;
+    }).join('');
 }
 
 // Profile
@@ -384,11 +448,72 @@ async function updatePreferences(e) {
     }
 }
 
+// Book Details Modal
+async function showBookDetails(bookId) {
+    // Record view interaction
+    if (authToken) {
+        interactWithBook(bookId, 'view');
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/books/${bookId}`);
+        if (!response.ok) {
+            showMessage('Book not found', 'error');
+            return;
+        }
+
+        const book = await response.json();
+        const modal = document.getElementById('book-details-modal');
+        const content = document.getElementById('book-details-content');
+
+        // Extract data from book object
+        const publishedDate = book.published_date || null;
+        const publisher = book.publisher || null;
+        const ratingsCount = book.ratings_count || null;
+        const allAuthors = book.all_authors || (book.author ? [book.author] : []);
+        const image = book.image || null;
+        const infoLink = book.info_link || null;
+        const previewLink = book.preview_link || null;
+
+        content.innerHTML = `
+            ${image ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(book.title)}" class="book-cover" onerror="this.style.display='none'">` : ''}
+            <h2>${escapeHtml(book.title)}</h2>
+            <p class="author">by ${allAuthors.length > 0 ? escapeHtml(allAuthors.join(', ')) : escapeHtml(book.author || 'Unknown Author')}</p>
+            <div class="metadata">
+                ${publishedDate ? `<div class="metadata-item"><span class="metadata-label">Published</span><span class="metadata-value">${escapeHtml(publishedDate)}</span></div>` : ''}
+                ${publisher ? `<div class="metadata-item"><span class="metadata-label">Publisher</span><span class="metadata-value">${escapeHtml(publisher)}</span></div>` : ''}
+                ${ratingsCount ? `<div class="metadata-item"><span class="metadata-label">Ratings</span><span class="metadata-value">${ratingsCount}</span></div>` : ''}
+            </div>
+            ${book.genres && book.genres.length > 0 ? `
+                <div style="margin: 1rem 0;">
+                    <span class="metadata-label" style="display: block; margin-bottom: 0.5rem;">Genres</span>
+                    <div class="genres">
+                        ${book.genres.map(g => `<span class="genre-tag">${escapeHtml(g)}</span>`).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            <div class="description">${escapeHtml(book.description || 'No description available')}</div>
+            <div class="book-links">
+                ${infoLink ? `<a href="${escapeHtml(infoLink)}" target="_blank">Read More</a>` : ''}
+                ${previewLink ? `<a href="${escapeHtml(previewLink)}" target="_blank">Preview</a>` : ''}
+            </div>
+        `;
+
+        modal.style.display = 'block';
+    } catch (error) {
+        console.error('Error loading book details:', error);
+        showMessage('Error loading book details', 'error');
+    }
+}
+
+function closeBookModal() {
+    document.getElementById('book-details-modal').style.display = 'none';
+}
+
 // Interactions
 async function interactWithBook(bookId, type) {
     if (!authToken) {
-        showAuthModal('login');
-        return;
+        return; // Silent for view, but show modal for like
     }
 
     try {
@@ -404,58 +529,14 @@ async function interactWithBook(bookId, type) {
             })
         });
 
-        if (response.ok) {
-            showMessage(`Book ${type}d successfully!`, 'success');
-        } else {
-            const error = await response.json();
-            showMessage(error.detail || 'Error recording interaction', 'error');
+        if (response.ok && type === 'like') {
+            showMessage('Book liked!', 'success');
         }
     } catch (error) {
         console.error('Error recording interaction:', error);
-        showMessage('Error recording interaction', 'error');
     }
 }
 
-function rateBook(bookId) {
-    if (!authToken) {
-        showAuthModal('login');
-        return;
-    }
-
-    const rating = prompt('Rate this book (0-5):');
-    if (rating === null) return;
-
-    const ratingNum = parseFloat(rating);
-    if (isNaN(ratingNum) || ratingNum < 0 || ratingNum > 5) {
-        showMessage('Please enter a valid rating between 0 and 5', 'error');
-        return;
-    }
-
-    fetch(`${API_BASE_URL}/interactions/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({
-            book_id: bookId,
-            interaction_type: 'rating',
-            rating: ratingNum
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.id) {
-            showMessage('Rating submitted successfully!', 'success');
-        } else {
-            showMessage(data.detail || 'Error submitting rating', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error submitting rating:', error);
-        showMessage('Error submitting rating', 'error');
-    });
-}
 
 // Utility Functions
 function showMessage(message, type) {
@@ -480,9 +561,13 @@ function escapeHtml(text) {
 
 // Close modal when clicking outside
 window.onclick = function(event) {
-    const modal = document.getElementById('auth-modal');
-    if (event.target === modal) {
+    const authModal = document.getElementById('auth-modal');
+    const bookModal = document.getElementById('book-details-modal');
+    if (event.target === authModal) {
         closeAuthModal();
+    }
+    if (event.target === bookModal) {
+        closeBookModal();
     }
 }
 
