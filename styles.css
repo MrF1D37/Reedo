@@ -318,18 +318,30 @@ body {
     flex-wrap: wrap;
 }
 
-.search-bar input {
+.search-bar input,
+.search-bar select {
     flex: 1;
     min-width: 200px;
     padding: 0.8rem;
     border: 2px solid var(--border-color);
     border-radius: 6px;
     font-size: 1rem;
+    background-color: var(--card-background);
+    color: var(--text-primary);
 }
 
-.search-bar input:focus {
+.search-bar input:focus,
+.search-bar select:focus {
     outline: none;
     border-color: var(--primary-color);
+}
+
+.search-bar select {
+    cursor: pointer;
+}
+
+.search-bar select option {
+    padding: 0.5rem;
 }
 
 /* Books Grid */
@@ -581,7 +593,8 @@ body {
         flex-direction: column;
     }
 
-    .search-bar input {
+    .search-bar input,
+    .search-bar select {
         width: 100%;
     }
 }

@@ -12,6 +12,7 @@ const LIMIT = 12;
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     checkAuth();
+    loadGenres(); // Load genres for dropdown
     // Show appropriate page based on auth status
     if (localStorage.getItem('authToken')) {
         showPage('books-page');
@@ -238,6 +239,38 @@ function showPage(pageId) {
     document.getElementById(pageId).style.display = 'block';
 }
 
+// Load Genres
+async function loadGenres() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/books/genres`);
+        if (response.ok) {
+            const genres = await response.json();
+            const genreFilter = document.getElementById('genre-filter');
+            const prefGenres = document.getElementById('pref-genres');
+            
+            // Populate genre filter dropdown
+            genres.forEach(genre => {
+                const option = document.createElement('option');
+                option.value = genre;
+                option.textContent = genre;
+                genreFilter.appendChild(option);
+            });
+            
+            // Also populate preferences genres dropdown if it exists
+            if (prefGenres && prefGenres.tagName === 'SELECT') {
+                genres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = genre;
+                    option.textContent = genre;
+                    prefGenres.appendChild(option);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading genres:', error);
+    }
+}
+
 // Books Functions
 async function loadBooks() {
     const search = document.getElementById('search-input').value;
@@ -406,8 +439,11 @@ function displayProfile(user) {
                 ? prefs.authors.join(', ') 
                 : prefs.authors;
         }
+        // Handle both reading_preferences and description (backend maps reading_preferences to description)
         if (prefs.reading_preferences) {
             document.getElementById('pref-reading-prefs').value = prefs.reading_preferences;
+        } else if (prefs.description) {
+            document.getElementById('pref-reading-prefs').value = prefs.description;
         }
     }
 }
