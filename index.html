@@ -14,6 +14,7 @@
                 <a href="#" id="nav-books" class="nav-link">Browse Books</a>
                 <a href="#" id="nav-recommendations" class="nav-link">My Recommendations</a>
                 <a href="#" id="nav-profile" class="nav-link">Profile</a>
+                <a href="#" id="nav-admin" class="nav-link" style="display: none;">Admin Dashboard</a>
                 <button id="btn-logout" class="btn-logout" style="display: none;">Logout</button>
                 <button id="btn-login" class="btn-primary">Login</button>
             </div>
@@ -107,8 +108,77 @@
                 </form>
             </div>
         </div>
+
+        <!-- Admin Dashboard Page -->
+        <div id="admin-page" class="page" style="display: none;">
+            <h2>Admin Dashboard</h2>
+            
+            <!-- Metrics Section -->
+            <div class="admin-section">
+                <h3>System Metrics</h3>
+                <div id="metrics-container" class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">RMSE</div>
+                        <div id="metric-rmse" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Precision@10</div>
+                        <div id="metric-precision" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Users</div>
+                        <div id="metric-users" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Books</div>
+                        <div id="metric-books" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Total Interactions</div>
+                        <div id="metric-interactions" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Content Embeddings Coverage</div>
+                        <div id="metric-content-cov" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">CF Embeddings Coverage</div>
+                        <div id="metric-cf-cov" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">GNN Vectors Coverage</div>
+                        <div id="metric-gnn-cov" class="metric-value">-</div>
+                    </div>
+                </div>
+                <button id="refresh-metrics" class="btn-primary">Refresh Metrics</button>
+            </div>
+
+            <!-- Graph Section -->
+            <div class="admin-section">
+                <h3>Recommendation Graph</h3>
+                <div class="graph-controls">
+                    <button id="load-overview-graph" class="btn-primary">Load Overview Graph</button>
+                    <div style="margin-top: 1rem;">
+                        <label>View User Graph:</label>
+                        <select id="user-select" style="margin-left: 0.5rem; padding: 0.5rem;">
+                            <option value="">Select a user...</option>
+                        </select>
+                        <button id="load-user-graph" class="btn-secondary" style="margin-left: 0.5rem;">Load User Graph</button>
+                    </div>
+                </div>
+                <div id="graph-container" style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px; margin-top: 1rem; background: #fafafa;"></div>
+            </div>
+
+            <!-- Users List Section -->
+            <div class="admin-section">
+                <h3>Users</h3>
+                <div id="users-list-container"></div>
+            </div>
+        </div>
     </main>
 
+    <!-- Load vis-network for graph visualization -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

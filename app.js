@@ -90,6 +90,27 @@ function setupEventListeners() {
 
     // Profile
     document.getElementById('preferences-form').addEventListener('submit', updatePreferences);
+
+    // Admin
+    document.getElementById('nav-admin').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (authToken) {
+            showPage('admin-page');
+            loadAdminDashboard();
+        } else {
+            showAuthModal('login');
+        }
+    });
+    document.getElementById('refresh-metrics').addEventListener('click', loadMetrics);
+    document.getElementById('load-overview-graph').addEventListener('click', loadOverviewGraph);
+    document.getElementById('load-user-graph').addEventListener('click', () => {
+        const userId = document.getElementById('user-select').value;
+        if (userId) {
+            loadUserGraph(userId);
+        } else {
+            showMessage('Please select a user', 'error');
+        }
+    });
 }
 
 // Auth Functions
@@ -117,6 +138,13 @@ async function loadCurrentUser() {
         
         if (response.ok) {
             currentUser = await response.json();
+            // Check if user is admin (simple check: email contains "admin")
+            const isAdmin = currentUser.email && (currentUser.email.toLowerCase().includes('admin') || currentUser.email === 'admin@example.com');
+            if (isAdmin) {
+                document.getElementById('nav-admin').style.display = 'block';
+            } else {
+                document.getElementById('nav-admin').style.display = 'none';
+            }
         } else if (response.status === 401) {
             // Only logout on authentication errors (401 Unauthorized)
             console.log('Token expired or invalid, logging out');
@@ -605,6 +633,242 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Admin Dashboard Functions
+let graphNetwork = null;
+
+async function loadAdminDashboard() {
+    await loadMetrics();
+    await loadUsersList();
+}
+
+async function loadMetrics() {
+    if (!authToken) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/analytics/metrics?k=10&min_interactions=5`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const metrics = data.metrics || {};
+            const counts = data.counts || {};
+            const coverage = data.coverage || {};
+            
+            document.getElementById('metric-rmse').textContent = metrics.rmse !== null && metrics.rmse !== undefined 
+                ? metrics.rmse.toFixed(4) : 'N/A';
+            document.getElementById('metric-precision').textContent = metrics.precision_at_k !== null && metrics.precision_at_k !== undefined
+                ? metrics.precision_at_k.toFixed(4) : 'N/A';
+            document.getElementById('metric-users').textContent = counts.users || 0;
+            document.getElementById('metric-books').textContent = counts.books || 0;
+            document.getElementById('metric-interactions').textContent = counts.interactions || 0;
+            document.getElementById('metric-content-cov').textContent = coverage.content_embeddings !== undefined
+                ? `${coverage.content_embeddings}%` : 'N/A';
+            document.getElementById('metric-cf-cov').textContent = coverage.cf_embeddings !== undefined
+                ? `${coverage.cf_embeddings}%` : 'N/A';
+            document.getElementById('metric-gnn-cov').textContent = coverage.gnn_vectors !== undefined
+                ? `${coverage.gnn_vectors}%` : 'N/A';
+        } else if (response.status === 403) {
+            showMessage('Admin access required', 'error');
+            showPage('books-page');
+        } else {
+            const error = await response.json();
+            showMessage(error.detail || 'Error loading metrics', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading metrics:', error);
+        showMessage('Error loading metrics', 'error');
+    }
+}
+
+async function loadUsersList() {
+    if (!authToken) return;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/analytics/users?limit=100`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const users = data.users || [];
+            const container = document.getElementById('users-list-container');
+            const select = document.getElementById('user-select');
+            
+            // Populate select dropdown
+            select.innerHTML = '<option value="">Select a user...</option>';
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.email} (${user.interaction_count} interactions)`;
+                select.appendChild(option);
+            });
+            
+            // Display users list
+            container.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background: var(--background); border-bottom: 2px solid var(--border-color);">
+                            <th style="padding: 0.75rem; text-align: left;">Email</th>
+                            <th style="padding: 0.75rem; text-align: left;">Name</th>
+                            <th style="padding: 0.75rem; text-align: center;">Interactions</th>
+                            <th style="padding: 0.75rem; text-align: center;">CF Vector</th>
+                            <th style="padding: 0.75rem; text-align: center;">KYC Embedding</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 0.75rem;">${escapeHtml(user.email)}</td>
+                                <td style="padding: 0.75rem;">${escapeHtml((user.first_name || '') + ' ' + (user.last_name || '')).trim() || '-'}</td>
+                                <td style="padding: 0.75rem; text-align: center;">${user.interaction_count}</td>
+                                <td style="padding: 0.75rem; text-align: center;">${user.has_cf_vector ? '✓' : '✗'}</td>
+                                <td style="padding: 0.75rem; text-align: center;">${user.has_kyc_embedding ? '✓' : '✗'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else if (response.status === 403) {
+            showMessage('Admin access required', 'error');
+        } else {
+            const error = await response.json();
+            showMessage(error.detail || 'Error loading users', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showMessage('Error loading users', 'error');
+    }
+}
+
+async function loadOverviewGraph() {
+    if (!authToken) return;
+    
+    const container = document.getElementById('graph-container');
+    container.innerHTML = '<p class="loading">Loading graph...</p>';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/analytics/graph/overview?max_users=50&max_books=100`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const graph = await response.json();
+            renderGraph(graph, container);
+        } else if (response.status === 403) {
+            showMessage('Admin access required', 'error');
+        } else {
+            const error = await response.json();
+            showMessage(error.detail || 'Error loading graph', 'error');
+            container.innerHTML = '<p class="loading">Error loading graph</p>';
+        }
+    } catch (error) {
+        console.error('Error loading graph:', error);
+        showMessage('Error loading graph', 'error');
+        container.innerHTML = '<p class="loading">Error loading graph</p>';
+    }
+}
+
+async function loadUserGraph(userId) {
+    if (!authToken) return;
+    
+    const container = document.getElementById('graph-container');
+    container.innerHTML = '<p class="loading">Loading user graph...</p>';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/analytics/graph/user/${userId}?max_books=20`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const graph = await response.json();
+            renderGraph(graph, container);
+        } else if (response.status === 403) {
+            showMessage('Admin access required', 'error');
+        } else {
+            const error = await response.json();
+            showMessage(error.detail || 'Error loading user graph', 'error');
+            container.innerHTML = '<p class="loading">Error loading user graph</p>';
+        }
+    } catch (error) {
+        console.error('Error loading user graph:', error);
+        showMessage('Error loading user graph', 'error');
+        container.innerHTML = '<p class="loading">Error loading user graph</p>';
+    }
+}
+
+function renderGraph(graphData, container) {
+    if (!graphData.nodes || !graphData.edges) {
+        container.innerHTML = '<p class="loading">No graph data available</p>';
+        return;
+    }
+    
+    // Prepare nodes for vis-network
+    const nodes = graphData.nodes.map(node => ({
+        id: node.id,
+        label: node.label || node.title || node.name || node.id,
+        title: node.title || node.label || node.name || '',
+        group: node.type === 'user' ? 'user' : 'book',
+        color: node.type === 'user' 
+            ? { background: '#8b5cf6', border: '#6a11cb' }
+            : { background: '#ec4899', border: '#be185d' },
+        shape: node.type === 'user' ? 'dot' : 'box',
+        size: node.type === 'user' ? 20 : 15
+    }));
+    
+    // Prepare edges for vis-network
+    const edges = graphData.edges.map(edge => ({
+        from: edge.source,
+        to: edge.target,
+        label: edge.type || '',
+        color: edge.type === 'similar' 
+            ? { color: '#10b981', highlight: '#059669' }
+            : { color: '#6b7280', highlight: '#374151' },
+        width: edge.weight || 1,
+        dashes: edge.type === 'similar'
+    }));
+    
+    // Clear container
+    container.innerHTML = '';
+    
+    // Create network
+    const data = { nodes, edges };
+    const options = {
+        nodes: {
+            font: { size: 12, color: '#1f2937' },
+            borderWidth: 2,
+            shadow: true
+        },
+        edges: {
+            font: { size: 10, align: 'middle' },
+            arrows: {
+                to: { enabled: true, scaleFactor: 0.5 }
+            },
+            smooth: { type: 'continuous' }
+        },
+        physics: {
+            enabled: true,
+            stabilization: { iterations: 200 }
+        },
+        interaction: {
+            hover: true,
+            tooltipDelay: 200,
+            zoomView: true,
+            dragView: true
+        }
+    };
+    
+    graphNetwork = new vis.Network(container, data, options);
 }
 
 // Close modal when clicking outside
