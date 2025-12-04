@@ -138,8 +138,9 @@ async function loadCurrentUser() {
         
         if (response.ok) {
             currentUser = await response.json();
-            // Check if user is admin (simple check: email contains "admin")
-            const isAdmin = currentUser.email && (currentUser.email.toLowerCase().includes('admin') || currentUser.email === 'admin@example.com');
+            // Check if user is admin (check is_admin field from backend)
+            // Backend should return is_admin in user object, but we'll also check email as fallback
+            const isAdmin = currentUser.is_admin || (currentUser.email && currentUser.email.toLowerCase().includes('admin'));
             if (isAdmin) {
                 document.getElementById('nav-admin').style.display = 'block';
             } else {
