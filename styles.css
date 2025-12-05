@@ -651,11 +651,29 @@ body {
 
 .graph-controls {
     margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
 }
 
-.graph-controls label {
+.graph-control-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.graph-control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.graph-control-group label {
     font-weight: 500;
     color: var(--text-primary);
+    white-space: nowrap;
 }
 
 .graph-controls select {
@@ -663,11 +681,88 @@ body {
     border: 2px solid var(--border-color);
     border-radius: 6px;
     font-size: 1rem;
-    min-width: 250px;
+    min-width: 150px;
+    background: white;
+    cursor: pointer;
+}
+
+.graph-controls select:hover {
+    border-color: var(--primary-color);
+}
+
+.graph-legend {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.legend-node {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid;
+}
+
+.legend-node.user-node {
+    background: #6366f1;
+    border-color: #4f46e5;
+}
+
+.legend-node.book-node {
+    background: #ec4899;
+    border-color: #be185d;
+    border-radius: 4px;
+}
+
+.legend-edge {
+    display: inline-block;
+    width: 24px;
+    height: 2px;
+    background: #6b7280;
+    margin-right: 4px;
+}
+
+.legend-edge.similar-edge {
+    background: #10b981;
+    border-top: 2px dashed #10b981;
+}
+
+.legend-edge.interaction-edge {
+    background: #6b7280;
 }
 
 #graph-container {
-    min-height: 600px;
+    width: 100%;
+    height: 700px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.graph-stats {
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: #f9fafb;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
 }
 
 table {

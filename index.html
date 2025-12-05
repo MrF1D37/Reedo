@@ -117,14 +117,71 @@
             <div class="admin-section">
                 <h3>System Metrics</h3>
                 <div id="metrics-container" class="metrics-grid">
+                    <!-- Error Metrics -->
                     <div class="metric-card">
                         <div class="metric-label">RMSE</div>
                         <div id="metric-rmse" class="metric-value">-</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-label">Precision@10</div>
-                        <div id="metric-precision" class="metric-value">-</div>
+                        <div class="metric-label">MAE</div>
+                        <div id="metric-mae" class="metric-value">-</div>
                     </div>
+                    
+                    <!-- Precision@K Metrics -->
+                    <div class="metric-card">
+                        <div class="metric-label">Precision@5</div>
+                        <div id="metric-precision-5" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Precision@10</div>
+                        <div id="metric-precision-10" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Precision@20</div>
+                        <div id="metric-precision-20" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Precision@50</div>
+                        <div id="metric-precision-50" class="metric-value">-</div>
+                    </div>
+                    
+                    <!-- Recall@K Metrics -->
+                    <div class="metric-card">
+                        <div class="metric-label">Recall@5</div>
+                        <div id="metric-recall-5" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Recall@10</div>
+                        <div id="metric-recall-10" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Recall@20</div>
+                        <div id="metric-recall-20" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Recall@50</div>
+                        <div id="metric-recall-50" class="metric-value">-</div>
+                    </div>
+                    
+                    <!-- nDCG@K Metrics -->
+                    <div class="metric-card">
+                        <div class="metric-label">nDCG@5</div>
+                        <div id="metric-ndcg-5" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">nDCG@10</div>
+                        <div id="metric-ndcg-10" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">nDCG@20</div>
+                        <div id="metric-ndcg-20" class="metric-value">-</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">nDCG@50</div>
+                        <div id="metric-ndcg-50" class="metric-value">-</div>
+                    </div>
+                    
+                    <!-- Counts -->
                     <div class="metric-card">
                         <div class="metric-label">Total Users</div>
                         <div id="metric-users" class="metric-value">-</div>
@@ -151,22 +208,88 @@
                     </div>
                 </div>
                 <button id="refresh-metrics" class="btn-primary">Refresh Metrics</button>
+                
+                <!-- RMSE Table Section -->
+                <div style="margin-top: 2rem;">
+                    <h4>RMSE Table (Sample: Actual vs Predicted)</h4>
+                    <div id="rmse-table-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px; margin-top: 1rem;">
+                        <table id="rmse-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f5f5f5; position: sticky; top: 0;">
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">User ID</th>
+                                    <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Book ID</th>
+                                    <th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #ddd;">Actual</th>
+                                    <th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #ddd;">Predicted</th>
+                                    <th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #ddd;">Error</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rmse-table-body">
+                                <tr><td colspan="5" style="padding: 1rem; text-align: center; color: #999;">No data available</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
 
             <!-- Graph Section -->
             <div class="admin-section">
                 <h3>Recommendation Graph</h3>
                 <div class="graph-controls">
-                    <button id="load-overview-graph" class="btn-primary">Load Overview Graph</button>
-                    <div style="margin-top: 1rem;">
-                        <label>View User Graph:</label>
-                        <select id="user-select" style="margin-left: 0.5rem; padding: 0.5rem;">
-                            <option value="">Select a user...</option>
-                        </select>
-                        <button id="load-user-graph" class="btn-secondary" style="margin-left: 0.5rem;">Load User Graph</button>
+                    <div class="graph-control-row">
+                        <button id="load-overview-graph" class="btn-primary">Load Overview Graph</button>
+                        <div class="graph-control-group">
+                            <label>View User Graph:</label>
+                            <select id="user-select">
+                                <option value="">Select a user...</option>
+                            </select>
+                            <button id="load-user-graph" class="btn-secondary">Load User Graph</button>
+                        </div>
+                    </div>
+                    <div class="graph-control-row" style="margin-top: 1rem;">
+                        <div class="graph-control-group">
+                            <label>Layout:</label>
+                            <select id="layout-select">
+                                <option value="force">Force-Directed</option>
+                                <option value="hierarchical">Hierarchical</option>
+                                <option value="circular">Circular</option>
+                            </select>
+                        </div>
+                        <div class="graph-control-group">
+                            <label>Filter:</label>
+                            <select id="filter-select">
+                                <option value="all">All Nodes</option>
+                                <option value="users">Users Only</option>
+                                <option value="books">Books Only</option>
+                            </select>
+                        </div>
+                        <div class="graph-control-group">
+                            <button id="reset-zoom" class="btn-secondary">Reset Zoom</button>
+                            <button id="fit-network" class="btn-secondary">Fit to Screen</button>
+                        </div>
                     </div>
                 </div>
-                <div id="graph-container" style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px; margin-top: 1rem; background: #fafafa;"></div>
+                <div class="graph-legend">
+                    <div class="legend-item">
+                        <span class="legend-node user-node"></span>
+                        <span>Users</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-node book-node"></span>
+                        <span>Books</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-edge interaction-edge"></span>
+                        <span>Interactions</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-edge similar-edge"></span>
+                        <span>Similarity</span>
+                    </div>
+                </div>
+                <div id="graph-container"></div>
+                <div class="graph-stats" id="graph-stats" style="display: none;">
+                    <span id="node-count">0 nodes</span> | <span id="edge-count">0 edges</span>
+                </div>
             </div>
 
             <!-- Users List Section -->

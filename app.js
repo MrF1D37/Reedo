@@ -8,6 +8,12 @@ let currentPage = 1;
 let currentOffset = 0;
 const LIMIT = 12;
 
+// Graph state
+let graphNetwork = null;
+let originalGraphData = null;
+let filteredNodes = null;
+let filteredEdges = null;
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
@@ -111,6 +117,75 @@ function setupEventListeners() {
             showMessage('Please select a user', 'error');
         }
     });
+    
+    // Graph controls
+    const layoutSelect = document.getElementById('layout-select');
+    const filterSelect = document.getElementById('filter-select');
+    const resetZoomBtn = document.getElementById('reset-zoom');
+    const fitNetworkBtn = document.getElementById('fit-network');
+    
+    if (layoutSelect) {
+        layoutSelect.addEventListener('change', function() {
+            if (graphNetwork && originalGraphData) {
+                renderGraph(originalGraphData, document.getElementById('graph-container'));
+            }
+        });
+    }
+    
+    if (filterSelect) {
+        filterSelect.addEventListener('change', function() {
+            if (!graphNetwork || !originalGraphData) return;
+            
+            const filter = filterSelect.value;
+            let nodes = filteredNodes;
+            let edges = filteredEdges;
+            
+            if (filter === 'users') {
+                nodes = filteredNodes.filter(n => n.group === 'user');
+                const nodeIds = new Set(nodes.map(n => n.id));
+                edges = filteredEdges.filter(e => nodeIds.has(e.from) && nodeIds.has(e.to));
+            } else if (filter === 'books') {
+                nodes = filteredNodes.filter(n => n.group === 'book');
+                const nodeIds = new Set(nodes.map(n => n.id));
+                edges = filteredEdges.filter(e => nodeIds.has(e.from) && nodeIds.has(e.to));
+            } else {
+                nodes = filteredNodes;
+                edges = filteredEdges;
+            }
+            
+            graphNetwork.setData({ nodes, edges });
+            document.getElementById('node-count').textContent = `${nodes.length} nodes`;
+            document.getElementById('edge-count').textContent = `${edges.length} edges`;
+        });
+    }
+    
+    if (resetZoomBtn) {
+        resetZoomBtn.addEventListener('click', function() {
+            if (graphNetwork) {
+                graphNetwork.moveTo({
+                    position: { x: 0, y: 0 },
+                    scale: 1,
+                    animation: {
+                        duration: 500,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            }
+        });
+    }
+    
+    if (fitNetworkBtn) {
+        fitNetworkBtn.addEventListener('click', function() {
+            if (graphNetwork) {
+                graphNetwork.fit({
+                    animation: {
+                        duration: 500,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            }
+        });
+    }
 }
 
 // Auth Functions
@@ -637,8 +712,6 @@ function escapeHtml(text) {
 }
 
 // Admin Dashboard Functions
-let graphNetwork = null;
-
 async function loadAdminDashboard() {
     await loadMetrics();
     await loadUsersList();
@@ -660,10 +733,46 @@ async function loadMetrics() {
             const counts = data.counts || {};
             const coverage = data.coverage || {};
             
+            // Error metrics
             document.getElementById('metric-rmse').textContent = metrics.rmse !== null && metrics.rmse !== undefined 
                 ? metrics.rmse.toFixed(4) : 'N/A';
-            document.getElementById('metric-precision').textContent = metrics.precision_at_k !== null && metrics.precision_at_k !== undefined
-                ? metrics.precision_at_k.toFixed(4) : 'N/A';
+            document.getElementById('metric-mae').textContent = metrics.mae !== null && metrics.mae !== undefined 
+                ? metrics.mae.toFixed(4) : 'N/A';
+            
+            // Precision@K metrics (now a dictionary)
+            const precisionAtK = metrics.precision_at_k || {};
+            document.getElementById('metric-precision-5').textContent = precisionAtK['5'] !== null && precisionAtK['5'] !== undefined
+                ? precisionAtK['5'].toFixed(4) : 'N/A';
+            document.getElementById('metric-precision-10').textContent = precisionAtK['10'] !== null && precisionAtK['10'] !== undefined
+                ? precisionAtK['10'].toFixed(4) : 'N/A';
+            document.getElementById('metric-precision-20').textContent = precisionAtK['20'] !== null && precisionAtK['20'] !== undefined
+                ? precisionAtK['20'].toFixed(4) : 'N/A';
+            document.getElementById('metric-precision-50').textContent = precisionAtK['50'] !== null && precisionAtK['50'] !== undefined
+                ? precisionAtK['50'].toFixed(4) : 'N/A';
+            
+            // Recall@K metrics
+            const recallAtK = metrics.recall_at_k || {};
+            document.getElementById('metric-recall-5').textContent = recallAtK['5'] !== null && recallAtK['5'] !== undefined
+                ? recallAtK['5'].toFixed(4) : 'N/A';
+            document.getElementById('metric-recall-10').textContent = recallAtK['10'] !== null && recallAtK['10'] !== undefined
+                ? recallAtK['10'].toFixed(4) : 'N/A';
+            document.getElementById('metric-recall-20').textContent = recallAtK['20'] !== null && recallAtK['20'] !== undefined
+                ? recallAtK['20'].toFixed(4) : 'N/A';
+            document.getElementById('metric-recall-50').textContent = recallAtK['50'] !== null && recallAtK['50'] !== undefined
+                ? recallAtK['50'].toFixed(4) : 'N/A';
+            
+            // nDCG@K metrics
+            const ndcgAtK = metrics.ndcg_at_k || {};
+            document.getElementById('metric-ndcg-5').textContent = ndcgAtK['5'] !== null && ndcgAtK['5'] !== undefined
+                ? ndcgAtK['5'].toFixed(4) : 'N/A';
+            document.getElementById('metric-ndcg-10').textContent = ndcgAtK['10'] !== null && ndcgAtK['10'] !== undefined
+                ? ndcgAtK['10'].toFixed(4) : 'N/A';
+            document.getElementById('metric-ndcg-20').textContent = ndcgAtK['20'] !== null && ndcgAtK['20'] !== undefined
+                ? ndcgAtK['20'].toFixed(4) : 'N/A';
+            document.getElementById('metric-ndcg-50').textContent = ndcgAtK['50'] !== null && ndcgAtK['50'] !== undefined
+                ? ndcgAtK['50'].toFixed(4) : 'N/A';
+            
+            // Counts
             document.getElementById('metric-users').textContent = counts.users || 0;
             document.getElementById('metric-books').textContent = counts.books || 0;
             document.getElementById('metric-interactions').textContent = counts.interactions || 0;
@@ -673,6 +782,23 @@ async function loadMetrics() {
                 ? `${coverage.cf_embeddings}%` : 'N/A';
             document.getElementById('metric-gnn-cov').textContent = coverage.gnn_vectors !== undefined
                 ? `${coverage.gnn_vectors}%` : 'N/A';
+            
+            // RMSE Table
+            const rmseTable = metrics.rmse_table || [];
+            const tableBody = document.getElementById('rmse-table-body');
+            if (rmseTable.length > 0) {
+                tableBody.innerHTML = rmseTable.map(row => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 0.75rem; font-size: 0.9em;">${row.user_id.substring(0, 8)}...</td>
+                        <td style="padding: 0.75rem;">${row.book_id}</td>
+                        <td style="padding: 0.75rem; text-align: right;">${row.actual.toFixed(3)}</td>
+                        <td style="padding: 0.75rem; text-align: right;">${row.predicted.toFixed(3)}</td>
+                        <td style="padding: 0.75rem; text-align: right; color: ${Math.abs(row.error) > 1 ? '#d32f2f' : '#666'};">${row.error > 0 ? '+' : ''}${row.error.toFixed(3)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tableBody.innerHTML = '<tr><td colspan="5" style="padding: 1rem; text-align: center; color: #999;">No RMSE data available</td></tr>';
+            }
         } else if (response.status === 403) {
             showMessage('Admin access required', 'error');
             showPage('books-page');
@@ -814,63 +940,250 @@ function renderGraph(graphData, container) {
         return;
     }
     
-    // Prepare nodes for vis-network
-    const nodes = graphData.nodes.map(node => ({
-        id: node.id,
-        label: node.label || node.title || node.name || node.id,
-        title: node.title || node.label || node.name || '',
-        group: node.type === 'user' ? 'user' : 'book',
-        color: node.type === 'user' 
-            ? { background: '#8b5cf6', border: '#6a11cb' }
-            : { background: '#ec4899', border: '#be185d' },
-        shape: node.type === 'user' ? 'dot' : 'box',
-        size: node.type === 'user' ? 20 : 15
-    }));
+    // Store original data for filtering
+    originalGraphData = graphData;
     
-    // Prepare edges for vis-network
-    const edges = graphData.edges.map(edge => ({
-        from: edge.source,
-        to: edge.target,
-        label: edge.type || '',
-        color: edge.type === 'similar' 
-            ? { color: '#10b981', highlight: '#059669' }
-            : { color: '#6b7280', highlight: '#374151' },
-        width: edge.weight || 1,
-        dashes: edge.type === 'similar'
-    }));
+    // Prepare nodes for vis-network with better styling
+    const nodes = graphData.nodes.map(node => {
+        const isUser = node.type === 'user';
+        const label = node.label || node.title || node.name || String(node.id).substring(0, 20);
+        const title = node.title || label || '';
+        
+        // Calculate node size based on connections (degree)
+        const degree = graphData.edges.filter(e => 
+            e.source === node.id || e.target === node.id
+        ).length;
+        const baseSize = isUser ? 25 : 20;
+        const size = Math.min(baseSize + degree * 2, 50);
+        
+        return {
+            id: node.id,
+            label: label.length > 30 ? label.substring(0, 27) + '...' : label,
+            title: `${title}\nType: ${node.type}\nConnections: ${degree}`,
+            group: isUser ? 'user' : 'book',
+            color: isUser 
+                ? { 
+                    background: '#6366f1', 
+                    border: '#4f46e5',
+                    highlight: { background: '#818cf8', border: '#6366f1' },
+                    hover: { background: '#818cf8', border: '#6366f1' }
+                }
+                : { 
+                    background: '#ec4899', 
+                    border: '#be185d',
+                    highlight: { background: '#f472b6', border: '#ec4899' },
+                    hover: { background: '#f472b6', border: '#ec4899' }
+                },
+            shape: isUser ? 'dot' : 'box',
+            size: size,
+            font: {
+                size: isUser ? 14 : 12,
+                color: '#1f2937',
+                face: 'Inter, system-ui, sans-serif',
+                bold: isUser
+            },
+            borderWidth: 3,
+            shadow: {
+                enabled: true,
+                color: 'rgba(0,0,0,0.2)',
+                size: 5,
+                x: 2,
+                y: 2
+            }
+        };
+    });
+    
+    // Prepare edges for vis-network with better styling
+    const edges = graphData.edges.map(edge => {
+        const isSimilar = edge.type === 'similar';
+        return {
+            from: edge.source,
+            to: edge.target,
+            label: edge.type || '',
+            color: isSimilar
+                ? { 
+                    color: '#10b981', 
+                    highlight: '#059669',
+                    hover: '#059669'
+                }
+                : { 
+                    color: '#6b7280', 
+                    highlight: '#374151',
+                    hover: '#374151'
+                },
+            width: Math.max(1, Math.min((edge.weight || 1) * 2, 5)),
+            dashes: isSimilar,
+            smooth: {
+                type: 'continuous',
+                roundness: 0.5
+            },
+            arrows: {
+                to: {
+                    enabled: !isSimilar,
+                    scaleFactor: 0.6,
+                    type: 'arrow'
+                }
+            },
+            font: {
+                size: 10,
+                align: 'middle',
+                color: '#6b7280'
+            }
+        };
+    });
+    
+    filteredNodes = nodes;
+    filteredEdges = edges;
     
     // Clear container
     container.innerHTML = '';
     
-    // Create network
+    // Update stats
+    document.getElementById('graph-stats').style.display = 'block';
+    document.getElementById('node-count').textContent = `${nodes.length} nodes`;
+    document.getElementById('edge-count').textContent = `${edges.length} edges`;
+    
+    // Get layout selection
+    const layoutType = document.getElementById('layout-select')?.value || 'force';
+    
+    // Create network with improved options
     const data = { nodes, edges };
     const options = {
         nodes: {
-            font: { size: 12, color: '#1f2937' },
-            borderWidth: 2,
-            shadow: true
+            font: { 
+                size: 14, 
+                color: '#1f2937',
+                face: 'Inter, system-ui, sans-serif'
+            },
+            borderWidth: 3,
+            shadow: {
+                enabled: true,
+                color: 'rgba(0,0,0,0.2)',
+                size: 5
+            },
+            chosen: {
+                node: function(values, id, selected, hovering) {
+                    if (hovering || selected) {
+                        values.size = values.size * 1.2;
+                        values.borderWidth = 5;
+                    }
+                }
+            }
         },
         edges: {
-            font: { size: 10, align: 'middle' },
-            arrows: {
-                to: { enabled: true, scaleFactor: 0.5 }
+            font: { 
+                size: 10, 
+                align: 'middle',
+                color: '#6b7280'
             },
-            smooth: { type: 'continuous' }
+            smooth: {
+                type: 'continuous',
+                roundness: 0.5
+            },
+            width: 2,
+            chosen: {
+                edge: function(values, id, selected, hovering) {
+                    if (hovering || selected) {
+                        values.width = values.width * 2;
+                    }
+                }
+            }
         },
         physics: {
             enabled: true,
-            stabilization: { iterations: 200 }
+            stabilization: { 
+                iterations: 250,
+                fit: true
+            },
+            ...(layoutType === 'force' ? {
+                forceAtlas2Based: {
+                    gravitationalConstant: -50,
+                    centralGravity: 0.01,
+                    springLength: 200,
+                    springConstant: 0.08,
+                    damping: 0.4,
+                    avoidOverlap: 1
+                }
+            } : layoutType === 'hierarchical' ? {
+                hierarchicalRepulsion: {
+                    centralGravity: 0.0,
+                    springLength: 200,
+                    springConstant: 0.01,
+                    nodeDistance: 120,
+                    damping: 0.09
+                }
+            } : {
+                repulsion: {
+                    centralGravity: 0.2,
+                    springLength: 200,
+                    springConstant: 0.05,
+                    nodeDistance: 100,
+                    damping: 0.09
+                }
+            })
         },
+        layout: layoutType === 'hierarchical' ? {
+            hierarchical: {
+                enabled: true,
+                direction: 'UD',
+                sortMethod: 'directed',
+                levelSeparation: 150,
+                nodeSpacing: 200,
+                treeSpacing: 200
+            }
+        } : layoutType === 'circular' ? {
+            randomSeed: 2
+        } : undefined,
         interaction: {
             hover: true,
-            tooltipDelay: 200,
+            tooltipDelay: 100,
             zoomView: true,
-            dragView: true
+            dragView: true,
+            selectConnectedEdges: true,
+            navigationButtons: true,
+            keyboard: {
+                enabled: true,
+                speed: { x: 10, y: 10, zoom: 0.02 },
+                bindToWindow: true
+            }
+        },
+        configure: {
+            enabled: false
         }
     };
     
     graphNetwork = new vis.Network(container, data, options);
+    
+    // Add event listeners for better interactivity
+    graphNetwork.on('select', function(params) {
+        if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const node = nodes.find(n => n.id === nodeId);
+            if (node) {
+                console.log('Selected node:', node);
+            }
+        }
+    });
+    
+    graphNetwork.on('hoverNode', function(params) {
+        container.style.cursor = 'pointer';
+    });
+    
+    graphNetwork.on('blurNode', function(params) {
+        container.style.cursor = 'default';
+    });
+    
+    // Fit network to screen after stabilization
+    graphNetwork.once('stabilizationEnd', function() {
+        graphNetwork.fit({
+            animation: {
+                duration: 1000,
+                easingFunction: 'easeInOutQuad'
+            }
+        });
+    });
 }
+
 
 // Close modal when clicking outside
 window.onclick = function(event) {
