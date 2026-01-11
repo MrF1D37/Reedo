@@ -506,6 +506,25 @@ body {
     margin-bottom: 0.5rem;
 }
 
+.recommendations-status {
+    background: var(--card-background);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.recommendations-status[data-type="personalized"] {
+    border-left-color: var(--success);
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.recommendations-status[data-type="fallback"] {
+    border-left-color: var(--warning);
+    background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+}
+
 .preferences-section {
     margin-top: 2rem;
 }

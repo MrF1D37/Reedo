@@ -500,12 +500,80 @@ async function loadRecommendations() {
         if (response.ok) {
             const data = await response.json();
             console.log('Recommendations data:', data);
+            
+            // Display metadata about recommendations
+            const statusDiv = document.getElementById('recommendations-status');
+            if (statusDiv && data.metadata) {
+                const meta = data.metadata;
+                let statusHTML = '';
+                let statusType = '';
+                
+                if (meta.is_personalized) {
+                    statusType = 'personalized';
+                    statusHTML = `
+                        <div style="color: #10b981; font-weight: bold; font-size: 1.05em;">
+                            ✨ Personalized Recommendations
+                        </div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            Based on your ${meta.interaction_count} interaction${meta.interaction_count !== 1 ? 's' : ''}
+                        </div>
+                    `;
+                } else {
+                    statusType = 'fallback';
+                    statusHTML = `
+                        <div style="color: #f59e0b; font-weight: bold; font-size: 1.05em;">
+                            📖 More Interactions Needed
+                        </div>
+                        <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                            You have <strong>${meta.interaction_count}</strong> interaction${meta.interaction_count !== 1 ? 's' : ''}. 
+                            You need <strong>${meta.needs_more} more interaction${meta.needs_more !== 1 ? 's' : ''}</strong> 
+                            (${meta.min_required} total) to receive personalized recommendations!
+                        </div>
+                        <div style="font-size: 0.85em; color: #888; margin-top: 8px;">
+                            💡 Tip: Browse books and interact with them (like, view, rate) to help us understand your preferences better.
+                        </div>
+                    `;
+                }
+                
+                statusDiv.setAttribute('data-type', statusType);
+                statusDiv.innerHTML = statusHTML;
+            }
+            
             if (data.recommendations && data.recommendations.length > 0) {
                 // Use the recommendations grid specifically
                 displayBooksInGrid(data.recommendations, 'recommendations-grid');
-                showMessage(`Found ${data.recommendations.length} recommendations!`, 'success');
+                if (data.metadata && data.metadata.is_personalized) {
+                    showMessage(`Found ${data.recommendations.length} personalized recommendations!`, 'success');
+                }
             } else {
-                grid.innerHTML = '<p class="loading">No recommendations available. Try interacting with some books first!</p>';
+                // No recommendations - show helpful message
+                if (data.metadata && data.metadata.needs_more > 0) {
+                    grid.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <p style="font-size: 1.1em; margin-bottom: 20px; color: #f59e0b;">
+                                📚 Start Exploring to Get Recommendations!
+                            </p>
+                            <p style="color: #666; margin-bottom: 15px;">
+                                You need ${data.metadata.needs_more} more interaction${data.metadata.needs_more !== 1 ? 's' : ''} 
+                                (${data.metadata.min_required} total) before we can provide personalized recommendations.
+                            </p>
+                            <p style="color: #888; font-size: 0.9em;">
+                                Browse books and interact with them (like, view, or rate) to build your profile.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    grid.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <p style="font-size: 1.1em; margin-bottom: 20px;">
+                                No recommendations available yet.
+                            </p>
+                            <p style="color: #666;">
+                                Start interacting with books to get personalized recommendations!
+                            </p>
+                        </div>
+                    `;
+                }
             }
         } else {
             const error = await response.json();
