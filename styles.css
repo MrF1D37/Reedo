@@ -344,6 +344,22 @@ body {
     padding: 0.5rem;
 }
 
+/* Genre filter wrapper for combobox functionality */
+.genre-filter-wrapper {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+}
+
+.genre-filter-wrapper input[list] {
+    width: 100%;
+}
+
+/* Style the datalist dropdown suggestions */
+.genre-filter-wrapper input[list]::-webkit-calendar-picker-indicator {
+    display: none;
+}
+
 /* Books Grid */
 .books-grid {
     display: grid;

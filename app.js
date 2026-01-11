@@ -375,7 +375,7 @@ function clearSearchFields() {
     
     if (searchInput) searchInput.value = '';
     if (authorFilter) authorFilter.value = '';
-    if (genreFilter) genreFilter.selectedIndex = 0;
+    if (genreFilter) genreFilter.value = ''; // Changed from selectedIndex since it's now an input
     
     // Reset pagination when clearing search
     currentPage = 1;
@@ -408,14 +408,15 @@ async function loadGenres() {
         if (response.ok) {
             const genres = await response.json();
             const genreFilter = document.getElementById('genre-filter');
+            const genreList = document.getElementById('genre-list');
             const prefGenres = document.getElementById('pref-genres');
             
-            // Populate genre filter dropdown
+            // Populate genre filter datalist (for autocomplete)
             genres.forEach(genre => {
                 const option = document.createElement('option');
                 option.value = genre;
                 option.textContent = genre;
-                genreFilter.appendChild(option);
+                genreList.appendChild(option);
             });
             
             // Also populate preferences genres dropdown if it exists

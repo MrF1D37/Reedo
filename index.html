@@ -65,9 +65,12 @@
             <div class="search-bar">
                 <input type="text" id="search-input" placeholder="Search books..." autocomplete="off">
                 <input type="text" id="author-filter" placeholder="Filter by author" autocomplete="off">
-                <select id="genre-filter">
-                    <option value="">All Genres</option>
-                </select>
+                <div class="genre-filter-wrapper">
+                    <input type="text" id="genre-filter" list="genre-list" placeholder="Filter by genre (type or select)" autocomplete="off">
+                    <datalist id="genre-list">
+                        <option value="">All Genres</option>
+                    </datalist>
+                </div>
                 <button id="search-btn" class="btn-primary">Search</button>
             </div>
             <div id="books-grid" class="books-grid"></div>
