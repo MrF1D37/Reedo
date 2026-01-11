@@ -212,7 +212,19 @@ async function loadCurrentUser() {
         });
         
         if (response.ok) {
-            currentUser = await response.json();
+            const newUser = await response.json();
+            
+            // If user changed or this is the first time loading a user, clear search and filter fields
+            if (!currentUser || (currentUser.id !== newUser.id)) {
+                clearSearchFields();
+                // Also reload books if we're on the books page to show fresh results
+                const booksPage = document.getElementById('books-page');
+                if (booksPage && booksPage.style.display !== 'none') {
+                    loadBooks();
+                }
+            }
+            
+            currentUser = newUser;
             // Check if user is admin (check is_admin field from backend)
             // Backend should return is_admin in user object, but we'll also check email as fallback
             const isAdmin = currentUser.is_admin || (currentUser.email && currentUser.email.toLowerCase().includes('admin'));
@@ -310,6 +322,9 @@ async function handleAuth(e) {
         const data = await response.json();
 
         if (response.ok) {
+            // Clear search and filter fields when logging in/signing up
+            clearSearchFields();
+            
             authToken = data.access_token;
             localStorage.setItem('authToken', authToken);
             closeAuthModal();
@@ -330,9 +345,41 @@ function logout() {
     authToken = null;
     currentUser = null;
     localStorage.removeItem('authToken');
+    
+    // Clear all form fields
+    const formFields = [
+        'pref-genres',
+        'pref-authors',
+        'pref-reading-prefs'
+    ];
+    formFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = '';
+        }
+    });
+    
+    // Clear search and filter fields
+    clearSearchFields();
+    
     checkAuth();
     showPage('login-prompt');
     showMessage('Logged out successfully', 'success');
+}
+
+// Helper function to clear all search and filter fields
+function clearSearchFields() {
+    const searchInput = document.getElementById('search-input');
+    const authorFilter = document.getElementById('author-filter');
+    const genreFilter = document.getElementById('genre-filter');
+    
+    if (searchInput) searchInput.value = '';
+    if (authorFilter) authorFilter.value = '';
+    if (genreFilter) genreFilter.selectedIndex = 0;
+    
+    // Reset pagination when clearing search
+    currentPage = 1;
+    currentOffset = 0;
 }
 
 // Page Navigation
@@ -341,6 +388,17 @@ function showPage(pageId) {
         page.style.display = 'none';
     });
     document.getElementById(pageId).style.display = 'block';
+    
+    // Clear search fields when switching to books page
+    // This ensures fresh search state when navigating to books
+    if (pageId === 'books-page') {
+        // Only clear if no user is logged in, or if this is the first time showing books page
+        // We'll let the user's search persist if they're just navigating back to books
+        // But we'll clear on user change (handled in loadCurrentUser)
+        if (!authToken) {
+            clearSearchFields();
+        }
+    }
 }
 
 // Load Genres
@@ -529,6 +587,11 @@ function displayProfile(user) {
         <h3>${escapeHtml(user.first_name || '')} ${escapeHtml(user.last_name || '')}</h3>
         <p><strong>Email:</strong> ${escapeHtml(user.email)}</p>
     `;
+
+    // Always clear preference fields first to prevent showing previous user's data
+    document.getElementById('pref-genres').value = '';
+    document.getElementById('pref-authors').value = '';
+    document.getElementById('pref-reading-prefs').value = '';
 
     // Load preferences if they exist
     if (user.kyc_preferences) {
